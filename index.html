@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>عداد توقيت نيون - رياضي</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700&display=swap');
+    body {
+      margin: 0;
+      background: #0a0a0a;
+      color: #0ff;
+      font-family: 'Orbitron', monospace, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      min-height: 100vh;
+      padding: 2rem;
+      overflow-x: hidden;
+    }
+    h1 {
+      font-size: 2.8rem;
+      margin-bottom: 1rem;
+      text-shadow:
+        0 0 10px #00ffff,
+        0 0 20px #00ffff,
+        0 0 30px #0ff,
+        0 0 40px #0ff;
+    }
+    #stopwatch {
+      font-size: 5rem;
+      letter-spacing: 0.1em;
+      margin-bottom: 2rem;
+      text-shadow:
+        0 0 5px #0ff,
+        0 0 10px #0ff,
+        0 0 20px #0ff,
+        0 0 30px #0ff,
+        0 0 40px #0ff;
+    }
+    button {
+      background: transparent;
+      border: 2px solid #0ff;
+      color: #0ff;
+      font-size: 1.5rem;
+      padding: 0.8rem 2rem;
+      margin: 0 1rem;
+      border-radius: 10px;
+      cursor: pointer;
+      box-shadow:
+        0 0 10px #0ff,
+        0 0 20px #0ff;
+      transition: background 0.3s, color 0.3s;
+      user-select: none;
+    }
+    button:hover {
+      background: #0ff;
+      color: #000;
+      box-shadow:
+        0 0 20px #0ff,
+        0 0 40px #0ff;
+    }
+    #buttons {
+      margin-bottom: 3rem;
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    #log {
+      width: 90%;
+      max-width: 600px;
+      background: #111;
+      border: 2px solid #0ff;
+      border-radius: 10px;
+      padding: 1rem;
+      max-height: 250px;
+      overflow-y: auto;
+      box-shadow:
+        0 0 10px #0ff,
+        inset 0 0 10px #0ff;
+    }
+    #log h2 {
+      margin-top: 0;
+      margin-bottom: 1rem;
+      text-align: center;
+      text-shadow:
+        0 0 5px #0ff,
+        0 0 10px #0ff;
+    }
+    #log ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    #log ul li {
+      padding: 0.5rem;
+      border-bottom: 1px solid #0ff3;
+      font-size: 1.2rem;
+      text-align: center;
+      text-shadow:
+        0 0 5px #0ff;
+    }
+    #log ul li:last-child {
+      border-bottom: none;
+    }
+    /* Neon flicker animation */
+    @keyframes neon-flicker {
+      0%, 100% { text-shadow: 
+        0 0 5px #0ff,
+        0 0 10px #0ff,
+        0 0 20px #0ff,
+        0 0 30px #0ff; }
+      50% { text-shadow: 
+        0 0 2px #0ff,
+        0 0 5px #0ff,
+        0 0 10px #0ff; }
+    }
+    #stopwatch {
+      animation: neon-flicker 1.5s infinite alternate;
+    }
+    /* Scrollbar styling */
+    #log::-webkit-scrollbar {
+      width: 8px;
+    }
+    #log::-webkit-scrollbar-track {
+      background: #111;
+    }
+    #log::-webkit-scrollbar-thumb {
+      background: #0ff;
+      border-radius: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>عداد توقيت نيون - رياضي</h1>
+  <div id="stopwatch">00:00:00.00</div>
+  <div id="buttons">
+    <button id="startStopBtn">تشغيل</button>
+    <button id="resetBtn" disabled>إعادة ضبط</button>
+  </div>
+  <div id="log">
+    <h2>سجل الجلسات السابقة</h2>
+    <ul id="sessionsList">
+      <!-- الجلسات تظهر هنا -->
+    </ul>
+  </div>
+
+  <script>
+    const stopwatchEl = document.getElementById('stopwatch');
+    const startStopBtn = document.getElementById('startStopBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const sessionsList = document.getElementById('sessionsList');
+
+    let startTime = 0;
+    let elapsedTime = 0;
+    let timerInterval;
+    let running = false;
+    let sessions = [];
+
+    function formatTime(time) {
+      const date = new Date(time);
+      const hours = String(date.getUTCHours()).padStart(2, '0');
+      const minutes = String(date.getUTCMinutes()).padStart(2, '0');
+      const seconds = String(date.getUTCSeconds()).padStart(2, '0');
+      const centiseconds = String(Math.floor(date.getUTCMilliseconds() / 10)).padStart(2, '0');
+      return `${hours}:${minutes}:${seconds}.${centiseconds}`;
+    }
+
+    function updateDisplay() {
+      elapsedTime = Date.now() - startTime;
+      stopwatchEl.textContent = formatTime(elapsedTime);
+    }
+
+    function startStop() {
+      if (!running) {
+        startTime = Date.now() - elapsedTime;
+        timerInterval = setInterval(updateDisplay, 10);
+        startStopBtn.textContent = 'إيقاف';
+        resetBtn.disabled = true;
+        running = true;
+      } else {
+        clearInterval(timerInterval);
+        running = false;
+        startStopBtn.textContent = 'تشغيل';
+        resetBtn.disabled = false;
+        logSession(elapsedTime);
+      }
+    }
+
+    function reset() {
+      elapsedTime = 0;
+      stopwatchEl.textContent = '00:00:00.00';
+      resetBtn.disabled = true;
+    }
+
+    function logSession(time) {
+      sessions.push(time);
+      const li = document.createElement('li');
+      li.textContent = formatTime(time);
+      sessionsList.prepend(li);
+    }
+
+    startStopBtn.addEventListener('click', startStop);
+    resetBtn.addEventListener('click', reset);
+  </script>
+</body>
+</html>
