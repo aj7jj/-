@@ -38,6 +38,7 @@
         0 0 20px #0ff,
         0 0 30px #0ff,
         0 0 40px #0ff;
+      animation: neon-flicker 1.5s infinite alternate;
     }
     button {
       background: transparent;
@@ -117,9 +118,6 @@
         0 0 5px #0ff,
         0 0 10px #0ff; }
     }
-    #stopwatch {
-      animation: neon-flicker 1.5s infinite alternate;
-    }
     /* Scrollbar styling */
     #log::-webkit-scrollbar {
       width: 8px;
@@ -131,10 +129,52 @@
       background: #0ff;
       border-radius: 10px;
     }
+    #loginSection, #userInfo {
+      margin-bottom: 2rem;
+      text-align: center;
+    }
+    #loginSection input {
+      padding: 0.5rem;
+      font-size: 1.2rem;
+      border-radius: 6px;
+      border: 1px solid #0ff;
+      background: #111;
+      color: #0ff;
+      width: 200px;
+      margin-left: 1rem;
+      text-align: center;
+    }
+    #loginSection button, #logoutBtn {
+      background: #064b35;
+      border: none;
+      padding: 0.7rem 1.5rem;
+      color: #9fefc1;
+      font-size: 1.2rem;
+      border-radius: 8px;
+      cursor: pointer;
+      box-shadow: 0 0 10px #0f0;
+      margin-left: 1rem;
+      transition: background 0.3s ease;
+    }
+    #loginSection button:hover, #logoutBtn:hover {
+      background: #0a6;
+    }
   </style>
 </head>
 <body>
   <h1>عداد توقيت نيون - رياضي</h1>
+
+  <div id="loginSection">
+    <label for="usernameInput">أدخل اسم المستخدم (اختياري):</label>
+    <input type="text" id="usernameInput" placeholder="مثلاً: محمد" />
+    <button id="loginBtn">تسجيل الدخول</button>
+  </div>
+
+  <div id="userInfo" class="hidden">
+    <span id="welcomeMsg"></span>
+    <button id="logoutBtn">تسجيل الخروج</button>
+  </div>
+
   <div id="stopwatch">00:00:00.00</div>
   <div id="buttons">
     <button id="startStopBtn">تشغيل</button>
@@ -153,11 +193,62 @@
     const resetBtn = document.getElementById('resetBtn');
     const sessionsList = document.getElementById('sessionsList');
 
+    const loginSection = document.getElementById('loginSection');
+    const userInfo = document.getElementById('userInfo');
+    const usernameInput = document.getElementById('usernameInput');
+    const loginBtn = document.getElementById('loginBtn');
+    const welcomeMsg = document.getElementById('welcomeMsg');
+    const logoutBtn = document.getElementById('logoutBtn');
+
     let startTime = 0;
     let elapsedTime = 0;
     let timerInterval;
     let running = false;
-    let sessions = [];
+
+    // اسم المستخدم الحالي (null إذا غير مسجل دخول)
+    let currentUser = null;
+    // سجل الجلسات لكل مستخدم في شكل كائن { username: [times] }
+    let allSessions = {};
+
+    // تحميل البيانات من localStorage عند بدء الصفحة
+    function loadSessionsFromStorage() {
+      const data = localStorage.getItem('stopwatchSessions');
+      if (data) {
+        allSessions = JSON.parse(data);
+      } else {
+        allSessions = {};
+      }
+    }
+
+    // حفظ البيانات في localStorage
+    function saveSessionsToStorage() {
+      localStorage.setItem('stopwatchSessions', JSON.stringify(allSessions));
+    }
+
+    // عرض سجل الجلسات الحالي (لمستخدم معين أو للجميع بدون تسجيل دخول)
+    function displaySessions() {
+      sessionsList.innerHTML = '';
+      let sessionsToShow = [];
+
+      if (currentUser && allSessions[currentUser]) {
+        sessionsToShow = allSessions[currentUser];
+      } else {
+        // عرض الجلسات العامة (أي الجلسات التي تم تسجيلها بدون تسجيل دخول)
+        sessionsToShow = allSessions['guest'] || [];
+      }
+
+      if (sessionsToShow.length === 0) {
+        const li = document.createElement('li');
+        li.textContent = 'لا توجد جلسات محفوظة.';
+        sessionsList.appendChild(li);
+      } else {
+        sessionsToShow.slice().reverse().forEach(time => {
+          const li = document.createElement('li');
+          li.textContent = formatTime(time);
+          sessionsList.appendChild(li);
+        });
+      }
+    }
 
     function formatTime(time) {
       const date = new Date(time);
@@ -195,12 +286,46 @@
       resetBtn.disabled = true;
     }
 
+    // تسجيل الجلسة مع حفظها حسب المستخدم أو كضيف
     function logSession(time) {
-      sessions.push(time);
-      const li = document.createElement('li');
-      li.textContent = formatTime(time);
-      sessionsList.prepend(li);
+      const userKey = currentUser || 'guest';
+      if (!allSessions[userKey]) {
+        allSessions[userKey] = [];
+      }
+      allSessions[userKey].push(time);
+      saveSessionsToStorage();
+      displaySessions();
     }
+
+    // تسجيل دخول المستخدم (اختياري)
+    function login() {
+      const username = usernameInput.value.trim();
+      if (username === '') {
+        alert('الرجاء إدخال اسم مستخدم صالح أو اتركه فارغًا للعب كضيف.');
+        return;
+      }
+      currentUser = username;
+      loginSection.classList.add('hidden');
+      userInfo.classList.remove('hidden');
+      welcomeMsg.textContent = `مرحباً، ${currentUser}!`;
+      displaySessions();
+    }
+
+    // تسجيل خروج المستخدم
+    function logout() {
+      currentUser = null;
+      loginSection.classList.remove('hidden');
+      userInfo.classList.add('hidden');
+      usernameInput.value = '';
+      displaySessions();
+    }
+
+    loginBtn.addEventListener('click', login);
+    logoutBtn.addEventListener('click', logout);
+
+    // تحميل الجلسات من localStorage عند بداية تحميل الصفحة
+    loadSessionsFromStorage();
+    displaySessions();
 
     startStopBtn.addEventListener('click', startStop);
     resetBtn.addEventListener('click', reset);
